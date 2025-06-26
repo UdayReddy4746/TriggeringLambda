@@ -1,0 +1,44 @@
+trigger:
+  branches:
+    include:
+      - main  # Triggers the pipeline when code is pushed to 'main' branch
+
+pool:
+  vmImage: 'ubuntu-latest'  # Use Microsoft-hosted Ubuntu agent
+
+variables:
+  AWS_REGION: 'us-east-1'  # Change to your AWS region
+
+stages:
+  - stage: TriggerLambda
+    jobs:
+      - job: InvokeLambda
+        steps:
+
+          # Step 1: Use Python (required to install AWS CLI via pip)
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.x'
+
+          # Step 2: Install AWS CLI
+          - script: |
+              pip install --upgrade --user awscli
+              export PATH=$PATH:~/.local/bin  # Add local pip bin to PATH
+            displayName: 'Install AWS CLI'
+
+          # Step 3: Invoke Lambda function
+          - script: |
+              echo "Triggering AWS Lambda..."
+
+              aws lambda invoke \
+                --function-name UdayReddy \
+                --payload '{"action":"build_started"}' \
+                --region $(AWS_REGION) \
+                response.json
+
+              echo "Lambda response:"
+              cat response.json
+            env:
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+            displayName: 'Invoke AWS Lambda'
